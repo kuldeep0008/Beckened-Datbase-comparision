@@ -1,0 +1,109 @@
+import os,glob
+
+import mysql.connector
+
+import pandas as pd
+
+import shutil
+
+import numpy as np
+
+from pandas.util.testing import assert_frame_equal
+
+ 
+
+ 
+
+#removing the existing files in
+
+for f in glob.glob("D:\Results\*.csv"):
+
+    os.remove(f)
+
+ 
+
+#connectin to the local host
+
+myconn = mysql.connector.connect(host = "localhost", user = "**",passwd = "**")
+
+#os.chdir(r'D:\SAVE_ENGINE\tmp\local_dbs\basic_scripts') #will use it for looping in all the files.
+
+os.chdir(r'D:\SAVE_ENGINE\tmp\local_dbs\Test_scripts')
+
+list_of_files=os.listdir()
+
+new_lst=[]
+
+for file_name in list_of_files:
+
+    if file_name.endswith(".txt"):
+
+        new_lst.append(file_name)
+
+        #src_path = r"D:\SAVE_ENGINE\tmp\local_dbs\basic_scripts\{}".format(file_name)
+
+        src_path=r"D:\SAVE_ENGINE\tmp\local_dbs\Test_scripts\{}".format(file_name)
+
+        dst_path = r"D:\SAVE_ENGINE\tmp\local_dbs\script1.txt"
+
+        shutil.copy(src_path, dst_path)
+
+print(new_lst)
+
+for file_name in new_lst:
+
+    csv_file=file_name.replace('.txt', "_output.csv")
+
+    print(csv_file)
+
+    if csv_file in list_of_files:
+
+            #csv_df=pd.read_csv(r"D:\SAVE_ENGINE\tmp\local_dbs\basic_scripts\{}".format(file_name),index_col=False)
+
+            csv_df = pd.read_csv(r"D:\SAVE_ENGINE\tmp\local_dbs\Test_scripts\{}".format(csv_file), index_col=False)
+
+            csv_df = csv_df.query('program_nickname=="Program 1"')
+
+            csv_df.reset_index(drop=True, inplace=True)
+
+            csv_df.to_csv('D:\Results\Csv_output.csv')
+
+   
+
+    #--------Running the command----------#  
+
+    os.system('cmd /c "D:\SAMPLE.exe D:\SAMPLE.ini"')
+
+    #-------Runnnig the sql query------------#
+
+    query1= "SELECT * FROM TABLE_NAME where program_nickname ='Program 1';"                        
+
+    #----Here converting sql result into dataframe----#
+
+    sql_df=pd.read_sql(query1, myconn)                    
+
+    #----Convering Sql dataframe result into csv----#
+
+    sql_df.to_csv('D:\Results\Sql_Dataframe.csv')
+
+    #-------Comparing two dataframes-------#
+
+    sql_df['Matched/UnMatched'] = np.where(sql_df['next_pdate'] == csv_df['next_pdate'],'True', 'False')
+
+   
+
+    #List of columsn for final dataframe
+
+    columns_list= ['close_out','next_pdate','last_pdate','basic_type','processing_type','program_nickname','trade_date','processing_list']
+
+   
+
+    #------Concatinating dataframes
+
+    df_all =pd.concat([sql_df[columns_list], csv_df[columns_list], sql_df[['Matched/UnMatched']]], keys=['Sql', 'Csv', 'Difference'], axis=0)
+
+ 
+
+    #converting to the dataframe
+
+    df_all.to_csv('D:\Results\df_all_Dataframe.csv')
